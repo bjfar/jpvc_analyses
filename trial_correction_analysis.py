@@ -7,7 +7,7 @@ import scipy.interpolate as spi
 import scipy.stats as sps
 import JMCtools.common as c
 
-tag = "GlobalTest_1e4"
+tag = "GlobalTest_1e2"
 with open("LEEpvals_{0}.pkl".format(tag), 'rb') as pkl_file: 
     pvals = pickle.load(pkl_file)
 

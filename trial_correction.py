@@ -11,6 +11,8 @@
    We then infer a global p-value based on the
    simulated distribution of minimum local p-values.
 """
+import matplotlib as mpl
+mpl.use('Agg') # Need this on clusters that have no window manager
 
 import numpy as np
 import scipy.stats as sps
@@ -21,6 +23,7 @@ from JMCtools.analysis import Analysis
 from JMCtools.experiment import Experiment
 import experiments.CBit_LHC_python as CBa
 import datatools as dt
+import concurrent.futures
 
 # Input nominal signal predictions for the
 # Collider experiments to be analysed
@@ -50,16 +53,18 @@ def get_signal(aname,m,i):
     dsets = dt.get_data(g, hdf5_names[aname], m, i)
     return [d.data() for d in dsets] 
 
-tag = "GlobalTest_1e4"
-Nsamples = int(1e4)
+tag = "GlobalTest_1e2"
+Nsamples = int(1e2)
 
 # Choose which points to analyses
 logl = dt.get_data(g, ["LogLike"])[0]
-m = logl.valid() # all points with valid likelihoods
-N = np.sum(m)
-#N = 100 # testing
+#m = logl.valid() # all points with valid likelihoods
+m = None
+#N = np.sum(m)
+N = 100 # testing
+chunksize = 50 # Number of samples to read in at once
 
-print("Analysing {0} model points...".format(np.sum(m)))
+print("Analysing {0} model points...".format(N))
 #quit()
 # Begin loop over signal hypotheses in HDF5 file
 # 
@@ -93,15 +98,14 @@ pseudodata_b = pre_cb.simulate(Nsamples,'musb',true_gof_parameters) #background-
 print([d.shape for d in pseudodata_b])
 print(SR_selections)
 
-for i in range(N):
+def loopfunc(i,signal):
+    print("****************************************************\n\
+Getting local pvalues for parameter point {0}\n\
+****************************************************".format(i))
+ 
     #if N==1: i = None
     # Extract the signal predictions for each point
-    print("Analysing HDF5 entry with signal:")
-    CBsignal = {}
-    for a in CBa.analyses:
-        CBsignal[a.name] = get_signal(a.name,m,i)
-        print("  {0}: {1}".format(a.name, CBsignal[a.name]))
-
+    #print("Analysing HDF5 entry with signal:")
     # Generate experiment objects to analyse
     expts = []
     my_pseudodata = []
@@ -112,9 +116,9 @@ for i in range(N):
         # Signal hypothesis needs to be supplied prior to building Experiment 
         # objects so that we can use it to select which signal regions to use for 
         # the analysis (as in ColliderBit)
-        s = CBsignal[a.name]
-        s_dict = {'s_{0}'.format(i): val for i,val in enumerate(s)}
-        b_dict = {'s_{0}'.format(i): 0 for i in range(a.N_SR)}
+        s = signal[a.name]  #all_signals[i][a.name]
+        s_dict = {'s_{0}'.format(k): val for k,val in enumerate(s)}
+        b_dict = {'s_{0}'.format(k): 0 for k in range(a.N_SR)}
         test_parameters[a.name] = s_dict
         try:
            e, selected = a.make_experiment(signal=s_dict)
@@ -135,23 +139,49 @@ for i in range(N):
 
     cb = Analysis(expts,tag,make_plots=False) # Turn off plotting to prevent drawing zillions of plots every iteration
 
-    print("test_parameters:", test_parameters)
+    #print("test_parameters:", test_parameters)
     # Test significance of data under background-only hypothesis (with signal at "test_parameters" being the signal hypothesis)
     cb.musb_analysis(test_parameters,pseudodata=None,nullmu=0,observed=my_pseudodata) # pseudodata=None means use asymptotic theory to compute p-values
 
-    print()
+    #print()
     mr = cb.results("(test == 'musb_mu=0') and (experiment == 'Monster')")
-    print(mr)
+    #print(mr)
     p = mr["a_pval"].item()
-    print(p)
-    pvals[i] = p 
+    #print(p)
+    #pvals[i] = p 
     # how to save results? Would be nice to see component-wise, i.e. trial-corrected values for all analyses as well as the combination
     # Redo pickling every 10 parameter points
-    if i % 10 == 0:
-        print("Pickling {0} p-values into LEEpvals_{1}.pkl".format(i,tag))
-        with open("LEEpvals_{0}.pkl".format(tag), 'wb') as pkl_file: 
-            pickle.dump(pvals,pkl_file)
-        
+    #if i % 10 == 0:
+    #    print("Pickling {0} p-values into LEEpvals_{1}.pkl".format(i,tag))
+    #    with open("LEEpvals_{0}.pkl".format(tag), 'wb') as pkl_file: 
+    #        pickle.dump(pvals,pkl_file)
+    return i, p
+
+# Run processing loop
+Nchunks = N // chunksize
+r = N % chunksize
+
+for j in range(Nchunks):
+    # Need to read all the signals for the chunk before beginning parallelised section, otherwise get HDF5 file access errors from parallel read attempts
+    print("Reading signal predictions for chunk {0} of {1} from input file...".format(j,Nchunks))
+    chunk_signals = []
+    chunk_start = j*chunksize
+    chunk_end = (j+1)*chunksize
+    if j==Nchunks:
+        chunk_end = chunk_start + r # incomplete chunk
+    for i in range(chunk_start,chunk_end):
+        CBsignal = {}
+        for a in CBa.analyses:
+            CBsignal[a.name] = get_signal(a.name,m,i)
+            #print("  {0}: {1}".format(a.name, CBsignal[a.name]))
+        chunk_signals += [CBsignal]
+
+    # Run analysis in parallel
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        for i, p in executor.map(loopfunc, range(chunk_start,chunk_end), chunk_signals): 
+           did_we_run=True # Need to check if this doesn't run for some reason
+           pvals[i] = p
+
 print("Pickling p-values into LEEpvals_{0}.pkl".format(tag))
 with open("LEEpvals_{0}.pkl".format(tag), 'wb') as pkl_file: 
     pickle.dump(pvals,pkl_file)
