@@ -16,6 +16,7 @@ import numpy as np
 import scipy.stats as sps
 import h5py
 import six
+import pickle
 from JMCtools.analysis import Analysis
 from JMCtools.experiment import Experiment
 import experiments.CBit_LHC_python as CBa
@@ -49,21 +50,51 @@ def get_signal(aname,m,i):
     dsets = dt.get_data(g, hdf5_names[aname], m, i)
     return [d.data() for d in dsets] 
 
-tag = "GlobalTest_1e3"
-Nsamples = int(1e3)
+tag = "GlobalTest_1e4"
+Nsamples = int(1e4)
 
 # Choose which points to analyses
 logl = dt.get_data(g, ["LogLike"])[0]
 m = logl.valid() # all points with valid likelihoods
-#N = np.sum(m)
-N = 10 # testing
+N = np.sum(m)
+#N = 100 # testing
 
+print("Analysing {0} model points...".format(np.sum(m)))
+#quit()
 # Begin loop over signal hypotheses in HDF5 file
 # 
 pvals = np.ones((N,Nsamples)) # Easiest to save them all, and THEN calculate the minima over parameter points
-pseudodata_b = None # Only generate the pseudodata once; use same samples for all parameter points
+
+# Generate pseudodata
+# This is actually a bit tricky, because different signal hypotheses will result in different
+# signal regions being used in the statistical tests.
+# So we have to simulate for ALL signal regions, then just pick out the ones we need for
+# each parameter point.
+
+# Generate experiment objects to analyse
+pre_expts = []
+SR_selections = []
+true_gof_parameters = {} # Signal + nuisance parameters of point in parameters space used to generate data (always defined in "gof" parameter space)
+
+for a in CBa.analyses:
+    b_dict = {'s_{0}'.format(i): 0 for i in range(a.N_SR)}
+    nuis_dict = {'theta_{0}'.format(i): 0 for i in range(a.N_SR)} # nominal values of nuisance parameters (for simulating data)
+    true_gof_parameters[a.name]  = {**b_dict, **nuis_dict}
+    try:
+       e, selected = a.make_experiment(assume_uncorrelated=True) # We need to generate pseudodata for all signal regions
+       pre_expts += [e]
+       SR_selections += [selected]
+    except:
+       six.reraise(Exception,Exception("Mystery error encountered while calling make_experiment for analysis {0}".format(a.name))) 
+
+pre_cb = Analysis(pre_expts,"pregeneration",make_plots=False)
+pseudodata_b = pre_cb.simulate(Nsamples,'musb',true_gof_parameters) #background-only pseudodata
+
+print([d.shape for d in pseudodata_b])
+print(SR_selections)
+
 for i in range(N):
-    if N==1: i = None
+    #if N==1: i = None
     # Extract the signal predictions for each point
     print("Analysing HDF5 entry with signal:")
     CBsignal = {}
@@ -73,42 +104,54 @@ for i in range(N):
 
     # Generate experiment objects to analyse
     expts = []
+    my_pseudodata = []
+    SR_selections = []
     test_parameters = {} # Signal predictions of point in parameter space to be tested
-    true_gof_parameters = {} # Signal + nuisance parameters of point in parameters space used to generate data (always defined in "gof" parameter space)
-    true_musb_parameters = {}
-    
-    for a in CBa.analyses:
+
+    for a,data in zip(CBa.analyses,pseudodata_b):
         # Signal hypothesis needs to be supplied prior to building Experiment 
         # objects so that we can use it to select which signal regions to use for 
         # the analysis (as in ColliderBit)
         s = CBsignal[a.name]
         s_dict = {'s_{0}'.format(i): val for i,val in enumerate(s)}
-        b_dict = {'s_{0}'.format(i): 0 for i in range(len(s))}
-        nuis_dict = {'theta_{0}'.format(i): 0 for i in range(len(s))} # nominal values of nuisance parameters (for simulating data)
+        b_dict = {'s_{0}'.format(i): 0 for i in range(a.N_SR)}
         test_parameters[a.name] = s_dict
-        true_gof_parameters[a.name]  = {**s_dict, **nuis_dict}
-        true_musb_parameters[a.name] = {**b_dict, **nuis_dict}
         try:
-           expts += [a.make_experiment(s_dict)]
+           e, selected = a.make_experiment(signal=s_dict)
         except:
            six.reraise(Exception,Exception("Mystery error encountered while calling make_experiment for analysis {0}".format(a.name))) 
-
-    cb = Analysis(expts,tag)
-   
-    # Generate pseudodata
-    if pseudodata_b is None:
-       pseudodata_b = cb.simulate(Nsamples,'musb',true_musb_parameters) #background-only pseudodata this time)
-
-    # Test significance of data under background-only hypothesis (with signal at "test_parameters" being the signal hypothesis)
-    cb.musb_analysis(test_parameters,pseudodata=None,nullmu=0,observed=pseudodata_b) # pseudodata=None means use asymptotic theory to compute p-values
+        expts += [e]
  
-     
+        # Get subset of pseudodata preselected for analysis for this signal hypothesis
+        # Bit tricky since we need to grab the nuisance observations as well
+        obs = data[...,selected]
+        nslice = slice(selected.start+a.N_SR,selected.stop+a.N_SR) # shift slice to nuisance observations
+        nuis = data[...,nslice]
+        # rejoin
+        my_pseudodata += [np.concatenate((obs,nuis),axis=-1)]
+  
+    #print(my_pseudodata)
+    #print([d.shape for d in my_pseudodata])
+
+    cb = Analysis(expts,tag,make_plots=False) # Turn off plotting to prevent drawing zillions of plots every iteration
+
+    print("test_parameters:", test_parameters)
+    # Test significance of data under background-only hypothesis (with signal at "test_parameters" being the signal hypothesis)
+    cb.musb_analysis(test_parameters,pseudodata=None,nullmu=0,observed=my_pseudodata) # pseudodata=None means use asymptotic theory to compute p-values
+
+    print()
     mr = cb.results("(test == 'musb_mu=0') and (experiment == 'Monster')")
     print(mr)
     p = mr["a_pval"].item()
     print(p)
     pvals[i] = p 
     # how to save results? Would be nice to see component-wise, i.e. trial-corrected values for all analyses as well as the combination
-
-print("All p-values:")
-print(p)
+    # Redo pickling every 10 parameter points
+    if i % 10 == 0:
+        print("Pickling {0} p-values into LEEpvals_{1}.pkl".format(i,tag))
+        with open("LEEpvals_{0}.pkl".format(tag), 'wb') as pkl_file: 
+            pickle.dump(pvals,pkl_file)
+        
+print("Pickling p-values into LEEpvals_{0}.pkl".format(tag))
+with open("LEEpvals_{0}.pkl".format(tag), 'wb') as pkl_file: 
+    pickle.dump(pvals,pkl_file)

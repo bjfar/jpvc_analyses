@@ -41,6 +41,8 @@ from .ColliderBit_analysis import Analysis
 # "CMS_13TeV_MultiLEP_2SSLep_36invfb",
 # "CMS_13TeV_MultiLEP_3Lep_36invfb",
 # "CMS_13TeV_2OSLEP_36invfb",
+
+allow_corr = False # Use the analyses with correlation matrices (much faster to leave them out for testing)
  
 analyses = []
 
@@ -158,7 +160,8 @@ a.cov = [[1.29, 0.33, 0.45, 0.49, 0.06, 0.09, 0.12, 0.08, 0.12, 0.09, 0.07, 0.12
  [0.07, 0.15, 0.15, 0.17, 0.03, 0.03, 0.04, 0.04, 0.07, 0.05,  0.2, 0.06],
  [0.12, 0.13, 0.19, 0.32, 0.03, 0.01, 0.05, 0.06, 0.07, 0.04, 0.06, 0.28]]
 a.N_SR = len(a.SR_names)
-###analyses += [a]
+if allow_corr:
+    analyses += [a]
 
 a = Analysis("CMS_13TeV_2LEPsoft_36invfb_nocovar")
 a.SR_names = ["SR1__i0", "SR2__i1", "SR3__i2", "SR4__i3", "SR5__i4", "SR6__i5", "SR7__i6", "SR8__i7", "SR9__i8", "SR10__i9", "SR11__i10", "SR12__i11", ]
@@ -181,7 +184,8 @@ a.cov = [[52.8, 12.7,    3,  1.2,  4.5,  5.1,  1.2],
  [ 5.1,    2,  0.3,  0.1,  1.8,  2.4,  0.4],
  [ 1.2,  0.7,  0.1,  0.1,  0.4,  0.4,  0.2]]
 a.N_SR = len(a.SR_names)
-###analyses += [a]
+if allow_corr:
+    analyses += [a]
 
 a = Analysis("CMS_13TeV_2OSLEP_36invfb_nocovar")
 a.SR_names = ["SR1__i0", "SR2__i1", "SR3__i2", "SR4__i3", "SR5__i4", "SR6__i5", "SR7__i6", ]
@@ -207,7 +211,7 @@ a.SR_b_sys = [4, 34, 5, 0.6, 28, 42, ]
 a.N_SR = len(a.SR_names)
 analyses += [a]
 
-# Extra hacking! Set background uncertainties in each analysis to be fully correlated!
+# Extra hacking! Set background uncertainties in each analysis to be highly correlated!
 #for a in analyses:
 #    if a.cov is None:
 #        # No covariance matrix: so add one! 0.9 correlation coefficient (1 gives singular matrix)

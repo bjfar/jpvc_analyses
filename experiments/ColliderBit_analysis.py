@@ -90,7 +90,7 @@ class Analysis:
         #self.SR_s    
         self.cov = None
 
-    def make_experiment(self,signal=None):
+    def make_experiment(self,signal=None,assume_uncorrelated=False):
         """Turn this analysis information into a jpvc experiment"""
         # Maximum likelihood estimators for 's' parameters
         # under the observed data, ignoring correlations
@@ -99,10 +99,10 @@ class Analysis:
         self.s_MLE = np.array(self.SR_n) - np.array(self.SR_b)
         print('self.cov:',self.cov)
         if self.cov is None or self.cov==[]:
-           e = self.make_experiment_nocov(signal)
+           e, selected = self.make_experiment_nocov(signal,assume_uncorrelated)
         else:
-           e = self.make_experiment_cov()
-        return e        
+           e, selected = self.make_experiment_cov()
+        return e, selected  
 
     # Functions to provide starting guesses for parameters, tuned to each MC sample realisation
     def seeds_full_f_add(self,selected=None):
@@ -127,7 +127,7 @@ class Analysis:
                # Sometimes get l < 0 predictions just due to small numerical errors. Fix these if they
                # are small enough not to matter
                mfix = (l<1e-10) & (l>-1e-10) # fix up these ones
-               print('l[mfix]:', l[mfix])
+               #print('l[mfix]:', l[mfix])
                acheck = l<-1e-10 # throw error if too terrible
                if np.sum(acheck)>0:
                    raise ValueError("Negative signal prediction detected!")
@@ -410,10 +410,17 @@ class Analysis:
                            scale_with_mu=list(s_opt.keys()),
                            asimov=self.make_get_asimov_nocov() # pretty sure Asimov data is the same regardless of correlations.
                            )
-        return e
 
+        selected = slice(0,self.N_SR) # let calling function know that all signal regions are to be used
+        return e, selected
 
-    def make_experiment_nocov(self,signal):
+    def make_experiment_nocov(self,signal=None,assume_uncorrelated=False):
+        # if assume_uncorrected is True, will use ALL signal regions and
+        # combine them as if they are uncorrelated.
+
+        if signal is None and assume_uncorrelated is False:
+            raise ValueError("No signal hypothesis supplied, and assume_uncorrelated is False! If we believe correlations may exist, then we need to preselect the signal region to use for the analysis based on the signal hypothesis to be tested. So please either set assumed_uncorrelated to True, or provide a signal hypothesis.")
+
         # Create the transformed pdf functions
         # Also requires some parameter renaming since we use the
         # same underlying function repeatedly
@@ -449,43 +456,44 @@ class Analysis:
         #print([self.SR_b_sys[i]/self.SR_b[i] for i in range(self.N_SR)])
         #quit()
 
-        # This next part is a little tricky. We DON'T know the correlations
-        # between signal regions here, so we follow the method used in
-        # ColliderBit and choose just one signal region to use in our test,
-        # by picking, in advance, the region with the best sensitivity to
-        # the signal that we are interested in.
-        # That is, the signal region with the highest value of
-        # Delta LogL = LogL(n=b|s,b) - LogL(n=b|s=0,b)
-        # is selected.
-        #
-        # So, we need to compute this for all signal regions.
-        seedf = self.seeds_null_f_gof()
-        seedb = seedf(expected_data,signal) # null hypothesis fits depend on signal parameters
-        zero_signal = {'s_{0}'.format(i): 0 for i in range(self.N_SR)}
-        seed  = seedf(expected_data,zero_signal)
-        LLR = []
-        for i in range(self.N_SR):
-            model = jtm.ParameterModel([poisson_part_add[i]]+[sys_dist_add[i]])
+        if assume_uncorrelated is False:
+            # This next part is a little tricky. We DON'T know the correlations
+            # between signal regions here, so we follow the method used in
+            # ColliderBit and choose just one signal region to use in our test,
+            # by picking, in advance, the region with the best sensitivity to
+            # the signal that we are interested in.
+            # That is, the signal region with the highest value of
+            # Delta LogL = LogL(n=b|s,b) - LogL(n=b|s=0,b)
+            # is selected.
+            #
+            # So, we need to compute this for all signal regions.
+            seedf = self.seeds_null_f_gof()
+            seedb = seedf(expected_data,signal) # null hypothesis fits depend on signal parameters
+            zero_signal = {'s_{0}'.format(i): 0 for i in range(self.N_SR)}
+            seed  = seedf(expected_data,zero_signal)
+            LLR = []
+            for i in range(self.N_SR):
+                model = jtm.ParameterModel([poisson_part_add[i]]+[sys_dist_add[i]])
   
-            odatai = np.array([np.round(self.SR_b[i])]+[0]) # median expected background-only data
-            si = 's_{0}'.format(i)
-            ti = 'theta_{0}'.format(i)
-            parsb = {ti: seedb[ti], **zero_signal}
-            pars  = {ti: seed[ti], **signal}
+                odatai = np.array([np.round(self.SR_b[i])]+[0]) # median expected background-only data
+                si = 's_{0}'.format(i)
+                ti = 'theta_{0}'.format(i)
+                parsb = {ti: seedb[ti], **zero_signal}
+                pars  = {ti: seed[ti], **signal}
 
-            Lmaxb = model.logpdf(parsb,odatai)
-            Lmax  = model.logpdf(pars,odatai)
+                Lmaxb = model.logpdf(parsb,odatai)
+                Lmax  = model.logpdf(pars,odatai)
 
-            LLR += [-2 * (Lmax - Lmaxb)]
-           
-        # Select region with largest expected (background-only) LLR for this signal
-        # (Note, if input signal is in fact zero, LLR will be zero for all signal regions, and
-        # signal region zero will always get chosen)
-        selected = slice(np.argmax(LLR),np.argmax(LLR)+1) # keep slice format for generality
+                LLR += [-2 * (Lmax - Lmaxb)]
 
-        # Just for curiosities sake, let's disable the signal region selection and treat them all as independent:
-        #selected = slice(0,self.N_SR)
-
+                # Select region with largest expected (background-only) LLR for this signal
+                # (Note, if input signal is in fact zero, LLR will be zero for all signal regions, and
+                # signal region zero will always get chosen)
+                selected = slice(np.argmax(LLR),np.argmax(LLR)+1) # keep slice format for generality
+               
+        else: 
+            # Disable the signal region selection and treat them all as independent:
+            selected = slice(0,self.N_SR)
         print("Selected signal region {0} ({1}) in analysis {2}".format(selected,self.SR_names[selected],self.name))
         submodels = poisson_part_add[selected] + sys_dist_add[selected]
 
@@ -533,9 +541,9 @@ class Analysis:
         # quit()
 
         # Define the experiment object and options for fitting during statistical tests
-        print(selected)
-        print(np.array(self.SR_n)[selected])
-        print(np.zeros(self.N_SR)[selected])
+        #print(selected)
+        #print(np.array(self.SR_n)[selected])
+        #print(np.zeros(self.N_SR)[selected])
         odata = ljoin(np.round(self.SR_n), np.zeros(self.N_SR), selected) 
         e = Experiment(self.name,joint,odata,DOF=len(sel_i))
          
@@ -575,7 +583,7 @@ class Analysis:
         # for l, el in zip(e.general_model.logpdf_list(pars,e.observed_data), expected_logpdf):
         #     print('   logpdf:{0},  exp:{1}'.format(l[0][0],el))
 
-        return e
+        return e, selected
 
     def make_dfull(self,s_opt,theta_opt,selected=None):
         # Can define extra calculations to be done or plots to be created using the fit
