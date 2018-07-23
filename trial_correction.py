@@ -85,7 +85,7 @@ logl = dt.get_data(g, ["LogLike"])[0]
 m = None
 #N = np.sum(m)
 N = len(logl.data()) # testing
-N = 10
+N = 100
 chunksize = 500 # Number of samples to read in at once
 
 print("Analysing {0} model points...".format(N))
@@ -286,8 +286,8 @@ if __name__ == '__main__':
                     signals += [CBsig] # list of signals to be distributed
  
                 # Tell worker processes to calculate stuff 
-                for i, p in executor.map(get_lpval, range(chunk_start,chunk_end), signals, chunksize=50):
-                    print("Point {0} finished".format(i)) 
+                for i, p in executor.map(get_lpval, range(chunk_start,chunk_end), signals, chunksize=10):
+                    #print("Point {0} finished".format(i)) 
                     did_we_run=True # Need to check if this doesn't run for some reason
                     pvals[i] = p
 
@@ -295,6 +295,7 @@ if __name__ == '__main__':
     endtime = time.time()
     print("\nTook {0:.0f} seconds".format(endtime-starttime))
     
-    print("Pickling p-values into LEEpvals_{0}.pkl".format(tag))
-    with open("LEEpvals_{0}.pkl".format(tag), 'wb') as pkl_file: 
-        pickle.dump(pvals,pkl_file)
+    if rank == 0:
+        print("Pickling p-values into LEEpvals_{0}.pkl".format(tag))
+        with open("LEEpvals_{0}.pkl".format(tag), 'wb') as pkl_file: 
+            pickle.dump(pvals,pkl_file)
