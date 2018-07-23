@@ -20,6 +20,7 @@ import h5py
 import six
 import pickle
 import sys
+import time
 from JMCtools.analysis import Analysis
 from JMCtools.experiment import Experiment
 import experiments.CBit_LHC_python as CBa
@@ -35,7 +36,8 @@ if len(sys.argv) < 2:
 else:
     Nproc = sys.argv[1]
 print("Will spawn up to {0} processes".format(Nproc))
-
+starttime = time.time()
+ 
 # Input nominal signal predictions for the
 # Collider experiments to be analysed
 
@@ -73,8 +75,8 @@ logl = dt.get_data(g, ["LogLike"])[0]
 m = None
 #N = np.sum(m)
 N = len(logl.data()) # testing
-N = 32
-chunksize = 16 #500 # Number of samples to read in at once
+N = 100
+chunksize = 50 #500 # Number of samples to read in at once
 
 print("Analysing {0} model points...".format(N))
 # Begin loop over signal hypotheses in HDF5 file
@@ -198,6 +200,10 @@ for j in range(Nchunks):
            print("Point {0} finished".format(i)) 
            did_we_run=True # Need to check if this doesn't run for some reason
            pvals[i] = p
+
+print("Finished!")
+endtime = time.time()
+print("\nTook {0:.0f} seconds using {1} processes".format(endtime-starttime,Nproc))
 
 print("Pickling p-values into LEEpvals_{0}.pkl".format(tag))
 with open("LEEpvals_{0}.pkl".format(tag), 'wb') as pkl_file: 
