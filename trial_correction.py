@@ -28,14 +28,24 @@ import datatools as dt
 #import concurrent.futures
 import mpi4py.futures 
 
-# Need to know how many MPI processes we are allowed to spawn.
-# The autodetection doesn't seem to work on Marconi, so let's just
-# input it via the command line.
-if len(sys.argv) < 2:
-    Nproc = 1
-else:
-    Nproc = sys.argv[1]
-print("Will spawn up to {0} processes".format(Nproc))
+# Hacky thing to get a decent traceback from concurrent processing in Python 2.x
+# Also works for MPIPoolExecutor in mpi4py Python 3
+# Credit: https://stackoverflow.com/a/29357032/1447953
+import functools
+import traceback
+def reraise_with_stack(func):
+
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            traceback_str = traceback.format_exc(e)
+            raise StandardError("Error occurred. Original traceback "
+                                "is\n%s\n" % traceback_str)
+
+    return wrapped
+
 starttime = time.time()
  
 # Input nominal signal predictions for the
@@ -76,7 +86,7 @@ m = None
 #N = np.sum(m)
 N = len(logl.data()) # testing
 N = 100
-chunksize = 50 #500 # Number of samples to read in at once
+chunksize = 500 # Number of samples to read in at once
 
 print("Analysing {0} model points...".format(N))
 # Begin loop over signal hypotheses in HDF5 file
@@ -111,7 +121,7 @@ pseudodata_b = pre_cb.simulate(Nsamples,'musb',true_gof_parameters) #background-
 print([d.shape for d in pseudodata_b])
 print(SR_selections)
 
-def loopfunc(i,signal):
+def get_lpval(i,signal):
     print("****************************************************\n\
 Getting local pvalues for parameter point {0}\n\
 ****************************************************".format(i))
@@ -170,41 +180,113 @@ Getting local pvalues for parameter point {0}\n\
     #        pickle.dump(pvals,pkl_file)
     return i, p
 
-# Run processing loop
-Nchunks = N // chunksize
-r = N % chunksize
+@reraise_with_stack
+def get_lpval_batch(islice,signals):
+    """To reduce message passing, let's try distributing points to process in batches"""
+    r = range(islice.stop)[islice]
+    pvals_batch = np.ones((len(r),Nsamples))
+    for j,(i,s) in enumerate(zip(r,signals)):
+        iout, p = get_lpval(i,s)
+        pvals_batch[j] = p
+    return islice, pvals_batch
+   
 
-for j in range(Nchunks):
-    # Need to read all the signals for the chunk before beginning parallelised section, otherwise get HDF5 file access errors from parallel read attempts
-    print("Reading signal predictions for chunk {0} of {1} from input file...".format(j,Nchunks))
-    chunk_signals = []
-    chunk_start = j*chunksize
-    chunk_end = (j+1)*chunksize
-    if j==Nchunks:
-        chunk_end = chunk_start + r # incomplete chunk
-    for i in range(chunk_start,chunk_end):
-        #if i % 100 == 0:
-        print("Loaded signal {0}".format(i))
-        CBsignal = {}
+# Main execution
+if __name__ == '__main__':
+   
+    # Run processing loop
+    Nchunks = N // chunksize
+    r = N % chunksize
+    if r!=0:
+        Nchunks += 1
+    for j in range(Nchunks):
+        # Need to read all the signals for the chunk before beginning parallelised section, otherwise get HDF5 file access errors from parallel read attempts
+        print("Reading signal predictions for chunk {0} of {1} from input file...".format(j,Nchunks))
+        chunk_signals = []
+        chunk_start = j*chunksize
+        chunk_end = (j+1)*chunksize
+        if j==(Nchunks-1) and r!=0:
+            chunk_end = chunk_start + r # incomplete chunk
+        thischunk_size = chunk_end - chunk_start
+        #print("chunk_start:", chunk_start)
+        #print("chunk_end:", chunk_end)
+    
+        CBsignals = {} # All signal predictions for this chunk
         for a in CBa.analyses:
-            CBsignal[a.name] = get_signal(a.name,m,i)
-            #print("  {0}: {1}".format(a.name, CBsignal[a.name]))
-        chunk_signals += [CBsignal]
+            chunkslice = slice(chunk_start,chunk_end)
+            CBsignals[a.name] = get_signal(a.name,m,chunkslice)
+      
+        print("Signal predictions loaded, starting parallel p-value calculation loop")
+        ## # To reduce message overhead, we distribute sub-chunks within this chunk.
+        ## subchunk_size = (thischunk_size+1) // Nproc # Have one sub-chunk per available process.
+        ## N_subchunks = thischunk_size // subchunk_size
+        ## r_subchunks = thischunk_size % subchunk_size
+        ## if r_subchunks!=0:
+        ##     N_subchunks+=1
+        ## #print("N_subchunks:", N_subchunks)
+        ## #print("r_subchunks:", r_subchunks)
+        ## #print("subchunk_size:", subchunk_size)
+    
+        ## # Some tedious rearranging of the signal data
+        ## signal_subchunks = []
+        ## subchunk_slices = []
+        ## for k in range(N_subchunks):
+        ##     subchunk_start = k*subchunk_size
+        ##     subchunk_end = (k+1)*subchunk_size
+        ##     if k==(N_subchunks-1) and r_subchunks!=0:
+        ##         subchunk_end = subchunk_start + r_subchunks
+        ##     subchunk_slices += [slice(chunk_start+subchunk_start,chunk_start+subchunk_end)] # slices (in real (masked) dataset indices) for each subchunk 
+        ##     signal_subchunk_k = []
+        ##     #print("k:",k)
+        ##     #print("subchunks_start:", subchunk_start)
+        ##     #print("subchunks_end:", subchunk_end)
+        ##     #print("N_subchunks:", N_subchunks)
+        ##     #print("r_subchunks:", r_subchunks)
+        ##     #print("subchunk_size:", subchunk_size)
+        ##     for i in range(subchunk_start,subchunk_end):
+        ##         #print("i:",i)
+        ##         CBsignals_subchunk_i = {}
+        ##         for a in CBa.analyses:
+        ##              CBsignals_subchunk_i[a.name] = [sig[i] for sig in CBsignals[a.name]]
+        ##         signal_subchunk_k += [CBsignals_subchunk_i]
+        ##     signal_subchunks += [signal_subchunk_k] # list of signals for each subchunk
+    
+        ## # Run analysis in parallel
+        ## #with concurrent.futures.ProcessPoolExecutor() as executor:
+        ## # MPI version
+        ## #with mpi4py.futures.MPIPoolExecutor(Nproc) as executor:
+        ## #    for islice, pbatch in executor.map(get_lpval_batch, subchunk_slices, signal_subchunks):
+        ## #       print("Subchunk {0} finished".format(islice)) 
+        ## #       did_we_run=True # Need to check if this doesn't run for some reason
+        ## #       pvals[islice] = pbatch
+        ## #       #print("islice:",islice)
+        ## #       #print("pbatch:",pbatch)
+        ## #       #print("pvals.shape:",pvals.shape)
+ 
+        # Without subchunking; just full list of signals for this chunk
+        # Turns out the executor.map function can automatically handle chunking 
+        signals = []
+        for i in range(thischunk_size):
+            CBsig = {}
+            for a in CBa.analyses:
+                CBsig[a.name] = [sig[i] for sig in CBsignals[a.name]]
+            signals += [CBsig] # list of signals for each subchunk
+  
+        with mpi4py.futures.MPICommExecutor(mpi4py.MPI.COMM_WORLD) as executor:
+            if executor is None: 
+                pass # worker process
+            else:
+                # Master to distribute and collect results
+                #for islice, pbatch in executor.map(get_lpval_batch, subchunk_slices, signal_subchunks):
+                for i, p in executor.map(get_lpval, range(chunk_start,chunk_end), signals, chunksize=50):
+                    print("Point {0} finished".format(i)) 
+                    did_we_run=True # Need to check if this doesn't run for some reason
+                    pvals[i] = p
 
-    print("Signal predictions loaded, starting parallel p-value calculation loop")
-    # Run analysis in parallel
-    #with concurrent.futures.ProcessPoolExecutor() as executor:
-    # MPI version
-    with mpi4py.futures.MPIPoolExecutor(Nproc) as executor:
-        for i, p in executor.map(loopfunc, range(chunk_start,chunk_end), chunk_signals):
-           print("Point {0} finished".format(i)) 
-           did_we_run=True # Need to check if this doesn't run for some reason
-           pvals[i] = p
-
-print("Finished!")
-endtime = time.time()
-print("\nTook {0:.0f} seconds using {1} processes".format(endtime-starttime,Nproc))
-
-print("Pickling p-values into LEEpvals_{0}.pkl".format(tag))
-with open("LEEpvals_{0}.pkl".format(tag), 'wb') as pkl_file: 
-    pickle.dump(pvals,pkl_file)
+    print("Finished!")
+    endtime = time.time()
+    print("\nTook {0:.0f} seconds using {1} processes".format(endtime-starttime,Nproc))
+    
+    print("Pickling p-values into LEEpvals_{0}.pkl".format(tag))
+    with open("LEEpvals_{0}.pkl".format(tag), 'wb') as pkl_file: 
+        pickle.dump(pvals,pkl_file)
