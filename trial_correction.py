@@ -23,7 +23,8 @@ from JMCtools.analysis import Analysis
 from JMCtools.experiment import Experiment
 import experiments.CBit_LHC_python as CBa
 import datatools as dt
-import concurrent.futures
+#import concurrent.futures
+import mpi4py.futures 
 
 # Input nominal signal predictions for the
 # Collider experiments to be analysed
@@ -53,19 +54,18 @@ def get_signal(aname,m,i):
     dsets = dt.get_data(g, hdf5_names[aname], m, i)
     return [d.data() for d in dsets] 
 
-tag = "GlobalTest_1e2"
-Nsamples = int(1e2)
+tag = "GlobalTest_1e4"
+Nsamples = int(1e4)
 
 # Choose which points to analyses
 logl = dt.get_data(g, ["LogLike"])[0]
 #m = logl.valid() # all points with valid likelihoods
 m = None
 #N = np.sum(m)
-N = 100 # testing
-chunksize = 50 # Number of samples to read in at once
+N = len(logl.data()) # testing
+chunksize = 500 # Number of samples to read in at once
 
 print("Analysing {0} model points...".format(N))
-#quit()
 # Begin loop over signal hypotheses in HDF5 file
 # 
 pvals = np.ones((N,Nsamples)) # Easiest to save them all, and THEN calculate the minima over parameter points
@@ -170,15 +170,21 @@ for j in range(Nchunks):
     if j==Nchunks:
         chunk_end = chunk_start + r # incomplete chunk
     for i in range(chunk_start,chunk_end):
+        #if i % 100 == 0:
+        print("Loaded signal {0}".format(i))
         CBsignal = {}
         for a in CBa.analyses:
             CBsignal[a.name] = get_signal(a.name,m,i)
             #print("  {0}: {1}".format(a.name, CBsignal[a.name]))
         chunk_signals += [CBsignal]
 
+    print("Signal predictions loaded, starting parallel p-value calculation loop")
     # Run analysis in parallel
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        for i, p in executor.map(loopfunc, range(chunk_start,chunk_end), chunk_signals): 
+    #with concurrent.futures.ProcessPoolExecutor() as executor:
+    # MPI version
+    with mpi4py.futures.MPIPoolExecutor() as executor:
+        for i, p in executor.map(loopfunc, range(chunk_start,chunk_end), chunk_signals):
+           print("Point {0} finished".format(i)) 
            did_we_run=True # Need to check if this doesn't run for some reason
            pvals[i] = p
 
