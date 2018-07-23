@@ -19,12 +19,22 @@ import scipy.stats as sps
 import h5py
 import six
 import pickle
+import sys
 from JMCtools.analysis import Analysis
 from JMCtools.experiment import Experiment
 import experiments.CBit_LHC_python as CBa
 import datatools as dt
 #import concurrent.futures
 import mpi4py.futures 
+
+# Need to know how many MPI processes we are allowed to spawn.
+# The autodetection doesn't seem to work on Marconi, so let's just
+# input it via the command line.
+if len(sys.argv) < 2:
+    Nproc = 1
+else:
+    Nproc = sys.argv[1]
+print("Will spawn up to {0} processes".format(Nproc))
 
 # Input nominal signal predictions for the
 # Collider experiments to be analysed
@@ -54,8 +64,8 @@ def get_signal(aname,m,i):
     dsets = dt.get_data(g, hdf5_names[aname], m, i)
     return [d.data() for d in dsets] 
 
-tag = "GlobalTest_1e4"
-Nsamples = int(1e4)
+tag = "GlobalTest_1e2"
+Nsamples = int(1e2)
 
 # Choose which points to analyses
 logl = dt.get_data(g, ["LogLike"])[0]
@@ -63,7 +73,8 @@ logl = dt.get_data(g, ["LogLike"])[0]
 m = None
 #N = np.sum(m)
 N = len(logl.data()) # testing
-chunksize = 500 # Number of samples to read in at once
+N = 32
+chunksize = 16 #500 # Number of samples to read in at once
 
 print("Analysing {0} model points...".format(N))
 # Begin loop over signal hypotheses in HDF5 file
@@ -182,7 +193,7 @@ for j in range(Nchunks):
     # Run analysis in parallel
     #with concurrent.futures.ProcessPoolExecutor() as executor:
     # MPI version
-    with mpi4py.futures.MPIPoolExecutor() as executor:
+    with mpi4py.futures.MPIPoolExecutor(Nproc) as executor:
         for i, p in executor.map(loopfunc, range(chunk_start,chunk_end), chunk_signals):
            print("Point {0} finished".format(i)) 
            did_we_run=True # Need to check if this doesn't run for some reason
