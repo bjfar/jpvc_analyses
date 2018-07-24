@@ -76,8 +76,8 @@ def get_signal(aname,m,i):
     dsets = dt.get_data(g, hdf5_names[aname], m, i)
     return [d.data() for d in dsets] 
 
-tag = "GlobalTest_1e2"
-Nsamples = int(1e2)
+tag = "GlobalTest_1e4"
+Nsamples = int(1e4)
 
 # Choose which points to analyses
 logl = dt.get_data(g, ["LogLike"])[0]
@@ -85,8 +85,8 @@ logl = dt.get_data(g, ["LogLike"])[0]
 m = None
 #N = np.sum(m)
 N = len(logl.data()) # testing
-N = 100
-chunksize = 500 # Number of samples to read in at once
+#N = 100
+chunksize = N #500 # Number of samples to read in at once
 
 print("Analysing {0} model points...".format(N))
 # Begin loop over signal hypotheses in HDF5 file
