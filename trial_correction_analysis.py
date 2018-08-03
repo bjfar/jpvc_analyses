@@ -7,7 +7,7 @@ import scipy.interpolate as spi
 import scipy.stats as sps
 import JMCtools.common as c
 
-tag = "GlobalTest_1e2"
+tag = "GlobalTest_1e3_9000points"
 with open("LEEpvals_{0}.pkl".format(tag), 'rb') as pkl_file: 
     pvals = pickle.load(pkl_file)
 
@@ -31,7 +31,7 @@ print("Smallest p-value observed:", minp)
 
 print("Generating CDF plots")
 minp = np.log10(minp) # 10^-4
-x = np.logspace(minp,0,10)
+x = np.logspace(minp,0,1000)
 # Ok let's make some plots of the CDF, to see the look-elsewhere effect in action
 fig = plt.figure(figsize=(10,8))
 nbins = int(0.1*10**(-minp))
@@ -53,18 +53,33 @@ ax.set_yscale("log")
 #ax.set_ylim(yran[0],yran[1])
   
 # Now the global version
-ax = fig.add_subplot(222)
-trials = Nsamples
-#n, bins = np.histogram(minpvals, bins=nbins) #, normed=True)
-#n = np.cumsum(n)/Nsamples
+# Compute effective number of independent tests performed
+# Could do fancy fit, but will just use a couple of fit points
 s = np.sort(minpvals)
 CDF = c.eCDF(s)
+Gp = spi.interp1d([0]+list(s)+[1],[0]+list(CDF)+[1])
+
+# Actually, I think it is in the *small* p-value limit that we
+# approach the independent situation... so let's fit it near
+# the lowest few values we have
+pl = s[:10]
+pg = Gp(pl)
+ks = np.log(1-pg)/np.log(1-pl)
+k = np.sum(ks)/len(pl) # average solution
+def G(x,k):
+    """CDF of minimum p-value in k independent tests. log-units version."""
+    return 1 - (1-x)**k
+
+ax = fig.add_subplot(222)
+trials = Nsamples
 ax.plot(s,CDF,drawstyle='steps-post',label="Simulated",c='b')
 ax.plot(x,x)
+ax.plot(x,G(x,k),label="analytic CDF of min(p,k) for k={0}".format(k))
 ax.set_xlabel("min(local p-value)")
 ax.set_ylabel("cdf(min(local p-value))")
 ax.set_xscale("log")     
 ax.set_yscale("log")     
+ax.legend(loc=1, frameon=False, framealpha=0,prop={'size':10})
 
 # Global version with significance axes
 ax = fig.add_subplot(223)
@@ -72,8 +87,11 @@ lsig = -sps.norm.ppf(s)
 gsig = -sps.norm.ppf(CDF)
 m = (lsig>0) & (gsig>0)
 ax.plot(lsig[m],gsig[m],drawstyle='steps-post',label="Simulated",c='b')
-y = np.linspace(0,5,10) 
+y = np.linspace(0,5,10)
 ax.plot(y,y)
+sx = -sps.norm.ppf(x)
+Gsx = -sps.norm.ppf(G(x,k))
+ax.plot(sx[Gsx>0],Gsx[Gsx>0],label="analytic CDF of max local significance for k={0}".format(k))
 ax.set_xlabel("local significance")
 ax.set_ylabel("global significance")
 

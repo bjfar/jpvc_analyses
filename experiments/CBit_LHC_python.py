@@ -42,7 +42,7 @@ from .ColliderBit_analysis import Analysis
 # "CMS_13TeV_MultiLEP_3Lep_36invfb",
 # "CMS_13TeV_2OSLEP_36invfb",
 
-allow_corr = False # Use the analyses with correlation matrices (much faster to leave them out for testing)
+allow_corr = True # Use the analyses with correlation matrices (much faster to leave them out for testing)
  
 analyses = []
 
@@ -52,7 +52,7 @@ a.SR_n     = [20, 3, 1503, 1137, 65, 0, 1329, 2877, 951, 150, 2, 373, 873, 444, 
 a.SR_b     = [16.21, 0.6503, 1480, 1088, 58.05, 0.2691, 1297, 2860, 991, 149.4, 2.024, 390.1, 884.6, 472.6, 171.1, 36.24, 1.457, 0.006531, 130.3, 310.8, 176.6, 65.1, 22.16, 3.895, 0.4816, 43.46, 102.6, 68.03, 30.72, 14.13, 2.358, 1.08, 13.56, 32.67, 23.78, 12.47, 5.549, 1.728, 0.8551, 2.816, 7.766, 8.968, 4.297, 2.785, 0.9345, 0.4297, ]
 a.SR_b_sys = [0.11, 0.0747, 26, 7, 0.39, 0.0547, 8, 36, 6.5, 1, 1.426, 2.6, 13.1, 3, 1.1, 0.24, 0.111, 0.004409, 0.8, 9.5, 1.2, 1.1, 6.03, 0.14, 0.0551, 0.29, 6.6, 0.45, 0.2, 3.19, 1.02, 0.23, 0.09, 3.39, 0.15, 0.08, 0.873, 0.879, 0.1211, 0.246, 2.114, 2.332, 0.335, 0.29, 0.2345, 0.0719, ]
 a.N_SR = len(a.SR_names)
-analyses += [a]
+#analyses += [a] # Turn this off just out of curiosity
 
 a = Analysis("ATLAS_13TeV_3b_36invfb")
 a.SR_names = ["SR-3b-meff1-A__i0", "SR-3b-meff2-A__i1", "SR-3b-meff3-A__i2", "SR-4b-meff1-A__i3", "SR-4b-meff1-B__i4", "SR-4b-meff2-A__i5", "SR-4b-meff2-B__i6", ]
@@ -68,7 +68,7 @@ a.SR_n     = [1063, 17, ]
 a.SR_b     = [1100, 12, ]
 a.SR_b_sys = [25, 8, ]
 a.N_SR = len(a.SR_names)
-#analyses += [a]
+analyses += [a]
 
 a = Analysis("ATLAS_13TeV_3b_discoverySR_36invfb")
 a.SR_names = ["SR-4b-meff1-A-disc__i0", ]
