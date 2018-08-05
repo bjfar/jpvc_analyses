@@ -44,8 +44,8 @@ LogLike = "LogLike"
 
 llike = dt.get_data(g, [LogLike])[0] #, m, i)
 
-#N = len(llike.data())
-N = 100 # testing
+N = len(llike.data())
+#N = 100 # testing
 
 print("Number of parameter points to process:",N)
 
@@ -113,7 +113,7 @@ def compute_marg_logl(n,l,cov,M,tol=0.01):
 if rank==0:
     final_loglikes = np.zeros((N,len(analyses)))
 
-batch_size = 20
+batch_size = 50
 
 # Need to do the MPI in a smart way.
 # I think best to have rank 0 manage file IO,
@@ -177,9 +177,11 @@ def save_done_batch(batch,i):
 
 def done_length():
     # Find the highest index below which everything is finished computing
-    i = pos[0].start
+    i = 0
     for slicepos in pos:
-        if slicepos.start < i:
+        if i==0 and slicepos is not None:
+            i = slicepos.start
+        elif slicepos is not None and slicepos.start < i:
             i = slicepos.start
     return i
 
