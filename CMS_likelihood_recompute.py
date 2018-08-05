@@ -45,14 +45,14 @@ LogLike = "LogLike"
 llike = dt.get_data(g, [LogLike])[0] #, m, i)
 
 #N = len(llike.data())
-N = 20 # testing
+N = 100 # testing
 
 print("Number of parameter points to process:",N)
 
 # Number of MC samples to use for marginalisation
 M = int(1e5) # Starting number of samples to use for marginalisation
 
-def compute_marg_logl(n,l,cov,M,tol=0.05):
+def compute_marg_logl(n,l,cov,M,tol=0.01):
     N_SR = len(n)
     t0 = time.time()
     converged = False
@@ -82,6 +82,8 @@ def compute_marg_logl(n,l,cov,M,tol=0.05):
             pass # need two batches before we start doubling
         else:
             Mnext *= 2 # Double size of next batch (ensures that we can combine batchs with equal weights)
+            if Mnext > 1e7:
+                converged = True # Stop if sample size getting too big
 
         # Check convergence
         pdiff = np.abs((like - like_prev) / like)
@@ -91,7 +93,7 @@ def compute_marg_logl(n,l,cov,M,tol=0.05):
         else:
             like_prev = like
     loglike = np.log(like)
-    #print("(rank {0}) time taken: {1} seconds (total samples: {2}, accuracy: {3})".format(rank, time.time() - t0, Mtot, pdiff))
+    print("(rank {0}) time taken: {1} seconds (total samples: {2}, accuracy: {3}, result: {4})".format(rank, time.time() - t0, Mtot, pdiff, loglike))
     return loglike 
 
 
@@ -108,9 +110,10 @@ def compute_marg_logl(n,l,cov,M,tol=0.05):
 # Now for the MSSM4 likelihoods
  
 # Results storage
-final_loglikes = np.zeros((N,len(analyses)))
+if rank==0:
+    final_loglikes = np.zeros((N,len(analyses)))
 
-batch_size = 3
+batch_size = 20
 
 # Need to do the MPI in a smart way.
 # I think best to have rank 0 manage file IO,
@@ -172,6 +175,14 @@ def save_done_batch(batch,i):
         # We didn't give them any work to do, so this is just a request for their first lot of work
         pass
 
+def done_length():
+    # Find the highest index below which everything is finished computing
+    i = pos[0].start
+    for slicepos in pos:
+        if slicepos.start < i:
+            i = slicepos.start
+    return i
+
 job_finished = False
 my_batch = None
 my_batch_size = 0
@@ -192,10 +203,11 @@ while not job_finished:
 
     if rank==0:
         # Save last batch of results
-        if my_batch is not None:
+        newdata = False
+        if my_batch is not None and my_batch[0]!=-1:
             save_done_batch(new_loglikes,0)
-        # Get some more data for self
-        
+            newdata = True
+       
         # Check for work requests from other processes
         status = MPI.Status()
         print("Master is checking if other processes need more work...")
@@ -203,6 +215,7 @@ while not job_finished:
             rnk = status.Get_source()
             # Keep looping until all work requests filled
             data = comm.recv(source=rnk)
+            newdata = True
             print("Master received new results from rank {0}".format(rnk))
             save_done_batch(data,rnk)
             # Send new batch back to rnk
@@ -212,6 +225,13 @@ while not job_finished:
                 print("Master has informed rank {0} that there are no more points to process".format(rnk))
             else:
                 print("Master sent a new batch of {0} points to rank {1}".format(newbatch[0],rnk))
+
+        # Let's save some interim results, why not
+        if newdata:
+            print("Pickling results into new_CMS_likes.pkl")
+            with open("new_CMS_likes_partial.pkl", 'wb') as pkl_file: 
+                pickle.dump(final_loglikes[:done_length()],pkl_file)
+ 
         if time.time() - t0 < 2:
             # Wait two seconds
             print("Master is waiting 2 seconds...") 
@@ -243,7 +263,7 @@ print("\nRank {0} took {1:.0f} seconds".format(rank,endtime-starttime))
 
 if rank == 0:
     print("Pickling results into new_CMS_likes.pkl")
-    with open("new_CMS_likes.pkl", 'wb') as pkl_file: 
+    with open("new_CMS_likes_finished.pkl", 'wb') as pkl_file: 
         pickle.dump(final_loglikes,pkl_file)
 
 # TODO:
