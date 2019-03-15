@@ -20,9 +20,10 @@ from scipy.optimize import least_squares
 name = "Higgs_invisible_width" 
 
 # Data for Higgs invisible width likelihood
-d1="DecayBit/data/arXiv_1306.2941_Figure_8.dat"
-d2="DecayBit/data/CMS-PAS-HIG-17-023_Figure_7-b.dat"
-chi2curve = np.loadtxt("/home/farmer/repos/gambit/copy3/{0}".format(d2))
+d1 ="DecayBit/data/arXiv_1306.2941_Figure_8.dat"
+d1p="DecayBit/data/arXiv_1306.2941_Figure_8_log_normal_50_profiled.dat"
+d2 ="DecayBit/data/CMS-PAS-HIG-17-023_Figure_7-b.dat"
+chi2curve = np.loadtxt("/home/farmer/repos/gambit/copy3/{0}".format(d1p))
 
 # Suppose we only have this curve. How can we cook up a reasonable sampling
 # distribution from this? I think there is little choice but to make some
@@ -36,16 +37,24 @@ chi2curve = np.loadtxt("/home/farmer/repos/gambit/copy3/{0}".format(d2))
 # (\hat{BF} - BF)^2 / sigma^2 + K
 #
 # So if we fit the curve to this, we can extract sigma, the standard deviation
-# the MLE.
+# ofthe MLE.
 #
 # Need function that computes residuals to do least squares fit
 def chi2f(mu,muBF,sigma,K):
     return (muBF - mu)**2/sigma**2 + K
 
+# def res(x):
+#     muBF,sigma,K = x[0], x[1], x[2]
+#     x,y = chi2curve.T
+#     return chi2f(x,muBF,sigma,K) - y # Difference compared to data
+
 def res(x):
     muBF,sigma,K = x[0], x[1], x[2]
     x,y = chi2curve.T
-    return chi2f(x,muBF,sigma,K) - y # Difference compared to data
+    # Only fit data near the minima. Otherwise incorrect tails throw the whole thing way off
+    mask = (x>(muBF-sigma)) & (x<(muBF+sigma))
+    return (chi2f(x[mask],muBF,sigma,K) - y[mask]) / np.sum(mask) # Difference compared to data
+
 
 x0 = np.array([0, 0.1, 0])
 r = least_squares(res, x0)

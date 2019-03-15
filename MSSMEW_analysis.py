@@ -22,10 +22,27 @@ import datatools as dt
 #hdf5file = "/home/farmer/repos/gambit/copy3/runs/MSSMEW/samples/MSSMEW.hdf5"
 #hdf5file = "data/MSSMEW_pp_bestfit_region.hdf5" # preliminary results
 #hdf5file = "data/MSSMEW_pp1_noSM__LogLgt0abs_nofailed_corr.temp.hdf5" # close-to-final results
-hdf5file = "data/MSSMEW_pp_bestfit.hdf5" # final best fit point (i.e. one point)
+#hdf5file = "data/MSSMEW_pp_bestfit.hdf5" # final best fit point (i.e. one point)
+#hdf5file = "data/MSSMEW_combined_sorted.hdf5" # Aug 23, after CMS likelihoods fixed and Tomas' data added
+
+# postprocessing for referee
+# Anders put the 13 TeV and 8 TeV stuff in different files by accident, but I have combined
+# them (at the new best fit point)
+hdf5file = "data/MSSMEW_LHC_BF_bothTeV.hdf5"
+
 gname = "MSSMEW"
 f = h5py.File(hdf5file,'r')
 g = f[gname]
+
+#tag = "AllLikes_BF_Asymptotic"
+#Nsamples = None
+#tag = "CMSfixed_AllLikes_BF_2e4_NOCORR"
+tag = "rev1_without_8TeV_2e4_NOCORR"
+Nsamples = int(2e4) #2e4) #2e4
+assume_uncorrelated = True #False: use SR preselection. True: Assume SR independent
+
+# Skip the analysis and just show us the signal predictions to be analysed
+signal_only = False
 
 starttime = time.time()
  
@@ -37,21 +54,63 @@ starttime = time.time()
 # The names are at least systematic so we can avoid repeating most of the junk.
 # We name the Python analyses to match the GAMBIT ones, as well as the signal region names.
 
+# Selection of LHC analyses to use in this calculation
+TeV13 = [
+"ATLAS_13TeV_4LEP_36invfb",
+"ATLAS_13TeV_RJ3L_2Lep2Jets_36invfb",
+"ATLAS_13TeV_RJ3L_3Lep_36invfb",
+"ATLAS_13TeV_3b_24invfb",
+"ATLAS_13TeV_MultiLEP_2Lep0Jets_36invfb",
+"ATLAS_13TeV_MultiLEP_2LepPlusJets_36invfb",
+"ATLAS_13TeV_MultiLEP_3Lep_36invfb",
+"CMS_13TeV_1LEPbb_36invfb",
+"CMS_13TeV_MultiLEP_2SSLep_36invfb",
+"CMS_13TeV_MultiLEP_3Lep_36invfb",
+"CMS_13TeV_2LEPsoft_36invfb",
+"CMS_13TeV_2OSLEP_36invfb"
+]
+
+# Selection of 13 TeV analyses using aggregate "discovery" signal regions instead of all of them 
+TeV13_disc = [
+"ATLAS_13TeV_4LEP_36invfb",
+"ATLAS_13TeV_RJ3L_2Lep2Jets_36invfb",
+"ATLAS_13TeV_RJ3L_3Lep_36invfb",
+"ATLAS_13TeV_3b_discoverySR_24invfb",
+"ATLAS_13TeV_MultiLEP_2Lep0Jets_36invfb",
+"ATLAS_13TeV_MultiLEP_2LepPlusJets_36invfb",
+"ATLAS_13TeV_MultiLEP_3Lep_36invfb",
+"CMS_13TeV_1LEPbb_36invfb",
+"CMS_13TeV_MultiLEP_2SSLep_36invfb",
+"CMS_13TeV_MultiLEP_3Lep_36invfb",
+"CMS_13TeV_2LEPsoft_36invfb",
+"CMS_13TeV_2OSLEP_36invfb"
+]
+        
+# 8TeV analyses
+TeV8 = [
+"CMS_8TeV_MultiLEP_3Lep_20invfb",
+"CMS_8TeV_MultiLEP_4Lep_20invfb",
+"ATLAS_8TeV_1LEPbb_20invfb",
+"ATLAS_8TeV_2LEPEW_20invfb",
+"ATLAS_8TeV_3LEPEW_20invfb"
+]
+
+#LHC_analyses = TeV13 #+ TeV8
+#LHC_analyses = TeV13_disc
+LHC_analyses = TeV13
+
 hdf5_names = {} # Names of hdf5 datasets to load
 for a in CBa.analyses:
-   hdf5_names[a.name] = ["#LHC_signals @ColliderBit::calc_LHC_signals::{0}__{1}__signal".format(a.name,SR) for SR in a.SR_names]
+  if a.name in LHC_analyses:
+    hdf5_names[a.name] = ["#LHC_signals @ColliderBit::calc_LHC_signals::{0}__{1}__signal".format(a.name,SR) for SR in a.SR_names]
+
+#LHC_signals\ @ColliderBit::calc_LHC_signals::CMS_8TeV_MultiLEP_3Lep_20invfb__SR3l_OSSF_mT<120_ETmiss50-100_mll75-105__i1__signal
 
 def get_signal(aname,m,i):
     """Extract signal vector for analysis 'name', chosen by applying mask 'm' 
        and then index 'i' to the corresponding HDF5 datasets"""
     dsets = dt.get_data(g, hdf5_names[aname], m, i)
     return [d.data() for d in dsets] 
-
-#tag = "AllLikes_BF_Asymptotic"
-#Nsamples = None
-tag = "AllLikes_BF_2e4_NOCORR_discoverySR"
-Nsamples = int(2e4)
-assume_uncorrelated = True # False: use SR preselection. True: Assume SR independent
 
 # Choose which points to analyses
 logl = dt.get_data(g, ["LogLike"])[0]
@@ -113,19 +172,26 @@ LHCdsets = [
 ,"#LHC_LogLike_per_SR @ColliderBit::get_LHC_LogLike_per_SR::CMS_13TeV_2LEPsoft_36invfb_nocovar__combined_LogLike"
 ,"#LHC_LogLike_per_SR @ColliderBit::get_LHC_LogLike_per_SR::CMS_13TeV_2OSLEP_36invfb__combined_LogLike"
 ,"#LHC_LogLike_per_SR @ColliderBit::get_LHC_LogLike_per_SR::CMS_13TeV_2OSLEP_36invfb_nocovar__combined_LogLike"
-,"#LHC_LogLike_per_SR @ColliderBit::get_LHC_LogLike_per_SR::CMS_13TeV_MONOJET_36invfb__combined_LogLike"
+#,"#LHC_LogLike_per_SR @ColliderBit::get_LHC_LogLike_per_SR::CMS_13TeV_MONOJET_36invfb__combined_LogLike"
 ,"#LHC_LogLike_per_SR @ColliderBit::get_LHC_LogLike_per_SR::CMS_13TeV_MultiLEP_2SSLep_36invfb__combined_LogLike"
 ,"#LHC_LogLike_per_SR @ColliderBit::get_LHC_LogLike_per_SR::CMS_13TeV_MultiLEP_3Lep_36invfb__combined_LogLike"
 ]
-LHCd = dt.get_data(g, LHCdsets)
+
+# New 8TeV analyses to satisfy referee
+LHC_8TeV_dsets = [
+ "#LHC_LogLike_per_SR @ColliderBit::get_LHC_LogLike_per_SR::ATLAS_8TeV_2LEPEW_20invfb__combined_LogLike"
+,"#LHC_LogLike_per_SR @ColliderBit::get_LHC_LogLike_per_SR::ATLAS_8TeV_3LEPEW_20invfb__combined_LogLike"
+,"#LHC_LogLike_per_SR @ColliderBit::get_LHC_LogLike_per_SR::ATLAS_8TeV_1LEPbb_20invfb__combined_LogLike"
+,"#LHC_LogLike_per_SR @ColliderBit::get_LHC_LogLike_per_SR::CMS_8TeV_MultiLEP_3Lep_20invfb__combined_LogLike"
+,"#LHC_LogLike_per_SR @ColliderBit::get_LHC_LogLike_per_SR::CMS_8TeV_MultiLEP_4Lep_20invfb__combined_LogLike"
+]
+
+LHCd = dt.get_data(g, LHCdsets+LHC_8TeV_dsets)
 
 print("LHC likelihoods at best fit:")
 for p,d in zip(LHCdsets,LHCd):
     print("   ",p)
     print("      ",d.data()[m])
-
-# Skip the analysis and just show us the signal predictions to be analysed
-signal_only = True
 
 # Begin loop over signal hypotheses in HDF5 file
 for i in range(N):
@@ -155,7 +221,9 @@ for i in range(N):
     mu1_parameters     ["Higgs_invisible_width"] = {'BF': BF}  
     mu0_parameters     ["Higgs_invisible_width"] = {'BF': 0}  
     gof_parameters     ["Higgs_invisible_width"] = {'BF': BF}  
-    gof_b_parameters   ["Higgs_invisible_width"] = {'BF': 0}  
+    gof_b_parameters   ["Higgs_invisible_width"] = {'BF': 0} 
+
+    print("MSSM_inv_Higgs_BF:", BF) 
     # ======
 
     # ------ Z invisible width:
@@ -223,13 +291,26 @@ for i in range(N):
     # Extract the signal predictions for each point
     print("Analysing HDF5 entry with signal:")
     CBsignal = {}
-    for a in CBa.analyses:
-        CBsignal[a.name] = get_signal(a.name,m,i)
-        print("  {0}: {1}".format(a.name, CBsignal[a.name]))
+    for aname in LHC_analyses:
+      a = next((x for x in CBa.analyses if x.name == aname), None)
+      if a is None:
+          raise ValueError("Could not find definition of requested analysis, named {0}".format(aname))
+      CBsignal[a.name] = get_signal(a.name,m,i)
+      print("  {0}: {1}".format(a.name, CBsignal[a.name]))
+      # Print naive Gaussian "sigma" deviation for each signal region
+      gdev = []
+      for s,b,n,sys in zip(CBsignal[a.name],a.SR_b,a.SR_n,a.SR_b_sys):
+          err = np.sqrt(sys**2 + s+b) # Need to combine Poisson variance with background systematics 
+          gdev += [(s+b - n)/err]
+      print("    Gdev: {0}".format(gdev))
+      print("    Gdev sum: {0}".format(np.sum(gdev)))
+      print("    N SR: {0}".format(a.N_SR))
+
     if signal_only: 
         continue
    
     for a in CBa.analyses:
+      if a.name in LHC_analyses:
         # Signal hypothesis needs to be supplied prior to building Experiment 
         # objects so that we can use it to select which signal regions to use for 
         # the analysis (as in ColliderBit)
@@ -294,7 +375,7 @@ for i in range(N):
     #cb.musb_analysis(test_parameters,pseudodata_mu1,nullmu=1)
      
     # Test significance of data under background-only hypothesis (with signal at "test_parameters" being the signal hypothesis)
-    #cb.musb_analysis(test_parameters,pseudodata_mu0,nullmu=0)
+    cb.musb_analysis(test_parameters,pseudodata_mu0,nullmu=0)
     
     # Test both mu=0 and mu=1 at once
     #cb.musb_analysis_dual(test_parameters,pseudodata_mu1,pseudodata_mu0)
@@ -314,7 +395,7 @@ for i in range(N):
     print(cb.results('test == "gof"')) 
     print(cb.results('test == "gof_b"')) 
     #print(cb.results('test == "musb_mu=1"'))
-    #print(cb.results('test == "musb_mu=0"'))
+    print(cb.results('test == "musb_mu=0"'))
     #print(cb.results('test == "musb_CLs"'))
 
     # Pickle results so we can more freely fiddle about with format for publication

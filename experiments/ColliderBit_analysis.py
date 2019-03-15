@@ -257,7 +257,10 @@ class Analysis:
                 #d1 = (r1 - (n - s - b))**2
                 #d2 = (r2 - (n - s - b))**2
                 # Or the closest to the MLE using a normal approximation for the Poisson? And fixing variance with theta=0...
-                MLE_norm = (x*A + (n-s-b)/(s+b)) / (A + 1./(s+b))
+                if (s+b) != 0:
+                   MLE_norm = (x*A + (n-s-b)/(s+b)) / (A + 1./(s+b))
+                else:
+                   MLE_norm = 0 
                 d1 = (r1 - MLE_norm)**2
                 d2 = (r2 - MLE_norm)**2
                 # Use this if both solutions are allowed.

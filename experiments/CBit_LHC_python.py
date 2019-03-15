@@ -52,7 +52,7 @@ a.SR_n     = [20, 3, 1503, 1137, 65, 0, 1329, 2877, 951, 150, 2, 373, 873, 444, 
 a.SR_b     = [16.21, 0.6503, 1480, 1088, 58.05, 0.2691, 1297, 2860, 991, 149.4, 2.024, 390.1, 884.6, 472.6, 171.1, 36.24, 1.457, 0.006531, 130.3, 310.8, 176.6, 65.1, 22.16, 3.895, 0.4816, 43.46, 102.6, 68.03, 30.72, 14.13, 2.358, 1.08, 13.56, 32.67, 23.78, 12.47, 5.549, 1.728, 0.8551, 2.816, 7.766, 8.968, 4.297, 2.785, 0.9345, 0.4297, ]
 a.SR_b_sys = [0.11, 0.0747, 26, 7, 0.39, 0.0547, 8, 36, 6.5, 1, 1.426, 2.6, 13.1, 3, 1.1, 0.24, 0.111, 0.004409, 0.8, 9.5, 1.2, 1.1, 6.03, 0.14, 0.0551, 0.29, 6.6, 0.45, 0.2, 3.19, 1.02, 0.23, 0.09, 3.39, 0.15, 0.08, 0.873, 0.879, 0.1211, 0.246, 2.114, 2.332, 0.335, 0.29, 0.2345, 0.0719, ]
 a.N_SR = len(a.SR_names)
-#analyses += [a] # Turn this off just out of curiosity
+analyses += [a]
 
 a = Analysis("ATLAS_13TeV_3b_36invfb")
 a.SR_names = ["SR-3b-meff1-A__i0", "SR-3b-meff2-A__i1", "SR-3b-meff3-A__i2", "SR-4b-meff1-A__i3", "SR-4b-meff1-B__i4", "SR-4b-meff2-A__i5", "SR-4b-meff2-B__i6", ]
@@ -68,7 +68,7 @@ a.SR_n     = [1063, 17, ]
 a.SR_b     = [1100, 12, ]
 a.SR_b_sys = [25, 8, ]
 a.N_SR = len(a.SR_names)
-analyses += [a]
+analyses += [a] # Use this for NOCORR analyses
 
 a = Analysis("ATLAS_13TeV_3b_discoverySR_36invfb")
 a.SR_names = ["SR-4b-meff1-A-disc__i0", ]
@@ -211,6 +211,48 @@ a.SR_b_sys = [4, 34, 5, 0.6, 28, 42, ]
 a.N_SR = len(a.SR_names)
 analyses += [a]
 
+# NEW! 8 TeV analyses for paper revison
+
+a = Analysis("CMS_8TeV_MultiLEP_3Lep_20invfb")
+a.SR_names = ["SR3l_OSSF_mT<120_ETmiss50-100_mll<75__i0", "SR3l_OSSF_mT<120_ETmiss50-100_mll75-105__i1", "SR3l_OSSF_mT<120_ETmiss50-100_mll>105__i2", "SR3l_OSSF_mT<120_ETmiss100-150_mll<75__i3", "SR3l_OSSF_mT<120_ETmiss100-150_mll75-105__i4", "SR3l_OSSF_mT<120_ETmiss100-150_mll>105__i5", "SR3l_OSSF_mT<120_ETmiss150-200_mll<75__i6", "SR3l_OSSF_mT<120_ETmiss150-200_mll75-105__i7", "SR3l_OSSF_mT<120_ETmiss150-200_mll>105__i8", "SR3l_OSSF_mT<120_ETmiss200-250_mll<75__i9", "SR3l_OSSF_mT<120_ETmiss200-250_mll75-105__i10", "SR3l_OSSF_mT<120_ETmiss200-250_mll>105__i11", "SR3l_OSSF_mT120-160_ETmiss50-100_mll<75__i12", "SR3l_OSSF_mT120-160_ETmiss50-100_mll75-105__i13", "SR3l_OSSF_mT120-160_ETmiss50-100_mll>105__i14", "SR3l_OSSF_mT120-160_ETmiss100-150_mll<75__i15", "SR3l_OSSF_mT120-160_ETmiss100-150_mll75-105__i16", "SR3l_OSSF_mT120-160_ETmiss100-150_mll>105__i17", "SR3l_OSSF_mT120-160_ETmiss150-200_mll<75__i18", "SR3l_OSSF_mT120-160_ETmiss150-200_mll75-105__i19", "SR3l_OSSF_mT120-160_ETmiss150-200_mll>105__i20", "SR3l_OSSF_mT120-160_ETmiss200-250_mll<75__i21", "SR3l_OSSF_mT120-160_ETmiss200-250_mll75-105__i22", "SR3l_OSSF_mT120-160_ETmiss200-250_mll>105__i23", "SR3l_OSSF_mT>160_ETmiss50-100_mll<75__i24", "SR3l_OSSF_mT>160_ETmiss50-100_mll75-105__i25", "SR3l_OSSF_mT>160_ETmiss50-100_mll>105__i26", "SR3l_OSSF_mT>160_ETmiss100-150_mll<75__i27", "SR3l_OSSF_mT>160_ETmiss100-150_mll75-105__i28", "SR3l_OSSF_mT>160_ETmiss100-150_mll>105__i29", "SR3l_OSSF_mT>160_ETmiss150-200_mll<75__i30", "SR3l_OSSF_mT>160_ETmiss150-200_mll75-105__i31", "SR3l_OSSF_mT>160_ETmiss150-200_mll>105__i32", "SR3l_OSSF_mT>160_ETmiss200-250_mll<75__i33", "SR3l_OSSF_mT>160_ETmiss200-250_mll75-105__i34", "SR3l_OSSF_mT>160_ETmiss200-250_mll>105__i35", "SR3l_noOSSF_mT<120_ETmiss50-100_mll<100__i36", "SR3l_noOSSF_mT<120_ETmiss50-100_mll>100__i37", "SR3l_noOSSF_mT<120_ETmiss100-150_mll<100__i38", "SR3l_noOSSF_mT<120_ETmiss100-150_mll>100__i39", "SR3l_noOSSF_mT<120_ETmiss150-200_mll<100__i40", "SR3l_noOSSF_mT<120_ETmiss150-200_mll>100__i41", "SR3l_noOSSF_mT<120_ETmiss200-250_mll<100__i42", "SR3l_noOSSF_mT<120_ETmiss200-250_mll>100__i43", "SR3l_noOSSF_mT120-160_ETmiss50-100_mll<100__i44", "SR3l_noOSSF_mT120-160_ETmiss50-100_mll>100__i45", "SR3l_noOSSF_mT120-160_ETmiss100-150_mll<100__i46", "SR3l_noOSSF_mT120-160_ETmiss100-150_mll>100__i47", "SR3l_noOSSF_mT120-160_ETmiss150-200_mll<100__i48", "SR3l_noOSSF_mT120-160_ETmiss150-200_mll>100__i49", "SR3l_noOSSF_mT120-160_ETmiss200-250_mll<100__i50", "SR3l_noOSSF_mT120-160_ETmiss200-250_mll>100__i51", "SR3l_noOSSF_mT>160_ETmiss50-100_mll<100__i52", "SR3l_noOSSF_mT>160_ETmiss50-100_mll>100__i53", "SR3l_noOSSF_mT>160_ETmiss100-150_mll<100__i54", "SR3l_noOSSF_mT>160_ETmiss100-150_mll>100__i55", "SR3l_noOSSF_mT>160_ETmiss150-200_mll<100__i56", "SR3l_noOSSF_mT>160_ETmiss150-200_mll>100__i57", "SR3l_noOSSF_mT>160_ETmiss200-250_mll<100__i58", "SR3l_noOSSF_mT>160_ETmiss200-250_mll>100__i59", "SR3l_SS1tau_mT<120_ETmiss50-100_mll<100__i60", "SR3l_SS1tau_mT<120_ETmiss50-100_mll>100__i61", "SR3l_SS1tau_mT<120_ETmiss100-150_mll<100__i62", "SR3l_SS1tau_mT<120_ETmiss100-150_mll>100__i63", "SR3l_SS1tau_mT<120_ETmiss150-200_mll<100__i64", "SR3l_SS1tau_mT<120_ETmiss150-200_mll>100__i65", "SR3l_SS1tau_mT<120_ETmiss200-250_mll<100__i66", "SR3l_SS1tau_mT<120_ETmiss200-250_mll>100__i67", "SR3l_SS1tau_mT120-160_ETmiss50-100_mll<100__i68", "SR3l_SS1tau_mT120-160_ETmiss50-100_mll>100__i69", "SR3l_SS1tau_mT120-160_ETmiss100-150_mll<100__i70", "SR3l_SS1tau_mT120-160_ETmiss100-150_mll>100__i71", "SR3l_SS1tau_mT120-160_ETmiss150-200_mll<100__i72", "SR3l_SS1tau_mT120-160_ETmiss150-200_mll>100__i73", "SR3l_SS1tau_mT120-160_ETmiss200-250_mll<100__i74", "SR3l_SS1tau_mT120-160_ETmiss200-250_mll>100__i75", "SR3l_SS1tau_mT>160_ETmiss50-100_mll<100__i76", "SR3l_SS1tau_mT>160_ETmiss50-100_mll>100__i77", "SR3l_SS1tau_mT>160_ETmiss100-150_mll<100__i78", "SR3l_SS1tau_mT>160_ETmiss100-150_mll>100__i79", "SR3l_SS1tau_mT>160_ETmiss150-200_mll<100__i80", "SR3l_SS1tau_mT>160_ETmiss150-200_mll>100__i81", "SR3l_SS1tau_mT>160_ETmiss200-250_mll<100__i82", "SR3l_SS1tau_mT>160_ETmiss200-250_mll>100__i83", "SR3l_OS1tau_mT<120_ETmiss50-100_mll<100__i84", "SR3l_OS1tau_mT<120_ETmiss50-100_mll>100__i85", "SR3l_OS1tau_mT<120_ETmiss100-150_mll<100__i86", "SR3l_OS1tau_mT<120_ETmiss100-150_mll>100__i87", "SR3l_OS1tau_mT<120_ETmiss150-200_mll<100__i88", "SR3l_OS1tau_mT<120_ETmiss150-200_mll>100__i89", "SR3l_OS1tau_mT<120_ETmiss200-250_mll<100__i90", "SR3l_OS1tau_mT<120_ETmiss200-250_mll>100__i91", "SR3l_OS1tau_mT120-160_ETmiss50-100_mll<100__i92", "SR3l_OS1tau_mT120-160_ETmiss50-100_mll>100__i93", "SR3l_OS1tau_mT120-160_ETmiss100-150_mll<100__i94", "SR3l_OS1tau_mT120-160_ETmiss100-150_mll>100__i95", "SR3l_OS1tau_mT120-160_ETmiss150-200_mll<100__i96", "SR3l_OS1tau_mT120-160_ETmiss150-200_mll>100__i97", "SR3l_OS1tau_mT120-160_ETmiss200-250_mll<100__i98", "SR3l_OS1tau_mT120-160_ETmiss200-250_mll>100__i99", "SR3l_OS1tau_mT>160_ETmiss50-100_mll<100__i100", "SR3l_OS1tau_mT>160_ETmiss50-100_mll>100__i101", "SR3l_OS1tau_mT>160_ETmiss100-150_mll<100__i102", "SR3l_OS1tau_mT>160_ETmiss100-150_mll>100__i103", "SR3l_OS1tau_mT>160_ETmiss150-200_mll<100__i104", "SR3l_OS1tau_mT>160_ETmiss150-200_mll>100__i105", "SR3l_OS1tau_mT>160_ETmiss200-250_mll<100__i106", "SR3l_OS1tau_mT>160_ETmiss200-250_mll>100__i107", ]
+a.SR_n     = [138, 821, 49, 16, 123, 10, 5, 34, 4, 2, 14, 4, 8, 29, 4, 2, 4, 2, 0, 1, 0, 0, 1, 0, 12, 13, 1, 3, 8, 3, 2, 3, 0, 0, 2, 0, 29, 1, 5, 0, 1, 0, 0, 0, 3, 1, 1, 0, 1, 0, 0, 0, 2, 0, 3, 0, 0, 0, 1, 0, 46, 3, 1, 0, 0, 0, 0, 0, 6, 1, 2, 0, 0, 0, 0, 0, 2, 1, 1, 1, 0, 0, 2, 0, 290, 27, 62, 8, 10, 0, 2, 0, 41, 7, 18, 4, 2, 0, 1, 0, 19, 2, 14, 3, 1, 3, 2, 1, ]
+a.SR_b     = [132, 776, 45, 20, 131, 10, 4, 34, 2.5, 1.9, 21, 1.2, 9.6, 23, 2.7, 3.3, 3.4, 0.71, 0.26, 0.72, 0.38, 0.29, 0.36, 0.24, 5.8, 7.5, 2.6, 4.5, 4, 1.8, 1.5, 1.5, 0.7, 0.81, 1.1, 0.4, 32, 1.7, 7.3, 0.3, 1, 0.14, 0.53, 0.03, 5.5, 0.25, 1.9, 0.19, 0.46, 0.03, 0.1, 0.008, 3.2, 0.44, 2.1, 0.42, 0.59, 0.1, 0.37, 0.16, 51, 2.8, 6, 0.5, 2, 0.11, 0.9, 0.042, 5.5, 0.35, 0.91, 0.06, 0.15, 0, 0.06, 0.011, 3.1, 0.5, 2.3, 0.4, 0.52, 0.21, 0.41, 0.06, 259, 30, 60, 5.9, 11, 2.3, 2.9, 1.1, 42, 8.3, 17, 2.3, 2, 0.27, 0.8, 0.5, 15, 5.7, 14, 4, 3.7, 1.3, 1.5, 0.7, ]
+a.SR_b_sys = [19, 125, 7, 4, 30, 1.9, 0.8, 8, 0.5, 0.4, 7, 0.3, 1.7, 5, 0.5, 0.8, 0.7, 0.22, 0.1, 0.19, 0.14, 0.11, 0.12, 0.2, 1.1, 1.4, 1.2, 1.1, 1, 0.9, 0.4, 0.5, 0.4, 0.21, 0.4, 0.24, 7, 0.4, 1.7, 0.11, 0.3, 0.09, 0.24, 0.03, 1.2, 0.07, 0.5, 0.1, 0.18, 0.03, 0.05, 0.01, 0.8, 0.33, 0.7, 0.19, 0.18, 0.06, 0.13, 0.14, 8, 0.6, 1.3, 0.14, 0.4, 0.07, 0.24, 0.021, 1, 0.13, 0.26, 0.05, 0.1, 0.008, 0.08, 0.012, 0.6, 0.21, 0.5, 0.17, 0.16, 0.11, 0.12, 0.05, 93, 13, 25, 2.6, 5, 1.4, 1.4, 0.6, 16, 2.9, 9, 1.3, 1.2, 0.32, 0.5, 0.4, 8, 2.3, 9, 2.2, 2.1, 1, 1, 0.4, ]
+a.N_SR = len(a.SR_names)
+analyses += [a]
+
+a = Analysis("CMS_8TeV_MultiLEP_4Lep_20invfb")
+a.SR_names = ["SR4l_1OSSF0tau_ETmiss<30__i0", "SR4l_1OSSF0tau_ETmiss30-50__i1", "SR4l_1OSSF0tau_ETmiss50-100__i2", "SR4l_1OSSF0tau_ETmiss>100__i3", "SR4l_1OSSF1tau_ETmiss<30__i4", "SR4l_1OSSF1tau_ETmiss30-50__i5", "SR4l_1OSSF1tau_ETmiss50-100__i6", "SR4l_1OSSF1tau_ETmiss>100__i7", "SR4l_2OSSF0tau_ETmiss<30__i8", "SR4l_2OSSF0tau_ETmiss30-50__i9", "SR4l_2OSSF0tau_ETmiss50-100__i10", "SR4l_2OSSF0tau_ETmiss>100__i11", ]
+a.SR_n     = [1, 3, 2, 2, 33, 11, 9, 2, 142, 25, 4, 1, ]
+a.SR_b     = [2.3, 1.2, 1.5, 0.8, 25, 11, 9.3, 2.9, 149, 28, 4.5, 0.8, ]
+a.SR_b_sys = [0.6, 0.3, 0.4, 0.3, 12, 3.1, 1.9, 0.6, 46, 11, 2.7, 0.3, ]
+a.N_SR = len(a.SR_names)
+analyses += [a]
+
+a = Analysis("ATLAS_8TeV_1LEPbb_20invfb")
+a.SR_names = ["SRA__i0", "SRB__i1", ]
+a.SR_n     = [4, 3, ]
+a.SR_b     = [5.69, 2.67, ]
+a.SR_b_sys = [1.1, 0.69, ]
+a.N_SR = len(a.SR_names)
+analyses += [a]
+
+a = Analysis("ATLAS_8TeV_2LEPEW_20invfb")
+a.SR_names = ["MT2_90_SF__i0", "MT2_90_DF__i1", "MT2_120_SF__i2", "MT2_120_DF__i3", "MT2_150_SF__i4", "MT2_150_DF__i5", "WWa_SF__i6", "WWa_DF__i7", "WWb_SF__i8", "WWb_DF__i9", "WWc_SF__i10", "WWc_DF__i11", "Zjets__i12", ]
+a.SR_n     = [33, 21, 5, 5, 3, 2, 73, 70, 26, 17, 10, 11, 1, ]
+a.SR_b     = [38.2, 23.3, 8.9, 3.6, 3.2, 1, 86.5, 73.6, 30.2, 18.1, 20.3, 9, 1.4, ]
+a.SR_b_sys = [5.1, 3.7, 2.1, 1.2, 0.7, 0.5, 7.4, 7.9, 3.5, 2.6, 3.5, 2.2, 0.6, ]
+a.N_SR = len(a.SR_names)
+analyses += [a]
+
+a = Analysis("ATLAS_8TeV_3LEPEW_20invfb")
+a.SR_names = ["SR0tau_a_bin_1__i0", "SR0tau_a_bin_2__i1", "SR0tau_a_bin_3__i2", "SR0tau_a_bin_4__i3", "SR0tau_a_bin_5__i4", "SR0tau_a_bin_6__i5", "SR0tau_a_bin_7__i6", "SR0tau_a_bin_8__i7", "SR0tau_a_bin_9__i8", "SR0tau_a_bin_10__i9", "SR0tau_a_bin_11__i10", "SR0tau_a_bin_12__i11", "SR0tau_a_bin_13__i12", "SR0tau_a_bin_14__i13", "SR0tau_a_bin_15__i14", "SR0tau_a_bin_16__i15", "SR0tau_a_bin_17__i16", "SR0tau_a_bin_18__i17", "SR0tau_a_bin_19__i18", "SR0tau_a_bin_20__i19", "SR1tau__i20", "SR2tau_a__i21", "SR2tau_b__i22", ]
+a.SR_n     = [36, 5, 9, 9, 11, 13, 15, 1, 28, 24, 29, 8, 714, 214, 63, 3, 60, 1, 0, 0, 13, 6, 5, ]
+a.SR_b     = [23, 4.2, 10.6, 8.5, 12.9, 6.6, 14.1, 1.1, 22.4, 16.4, 27, 5.5, 715, 219, 65, 4.6, 69, 3.4, 1.2, 0.29, 10.3, 6.9, 7.2, ]
+a.SR_b_sys = [4, 1.5, 1.8, 1.7, 2.4, 1.9, 2.2, 0.4, 3.6, 2.8, 5, 1.5, 70, 33, 13, 1.7, 9, 1.4, 0.4, 0.18, 1.2, 0.8, 0.8, ]
+a.N_SR = len(a.SR_names)
+analyses += [a]
+
 # Extra hacking! Set background uncertainties in each analysis to be highly correlated!
 #for a in analyses:
 #    if a.cov is None:
@@ -220,3 +262,9 @@ analyses += [a]
 #            a.cov[k][k] = a.SR_b_sys[k]**2 # Need diagonal to be correct variance though
 #
 #    print(a.cov)
+
+#CMS_8TeV_MultiLEP_3Lep_20invfb
+#CMS_8TeV_MultiLEP_4Lep_20invfb
+#ATLAS_8TeV_1LEPbb_20invfb
+#ATLAS_8TeV_2LEPEW_20invfb
+#ATLAS_8TeV_3LEPEW_20invfb

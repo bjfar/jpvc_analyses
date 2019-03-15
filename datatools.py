@@ -14,7 +14,7 @@ class DataPair:
      return self._data
 
   def valid(self):
-     return np.array(self._valid, dtype=np.bool)
+     return np.isclose(np.array(self._valid),1)
 
   def validdata(self):
      return self.data()[self.valid()]

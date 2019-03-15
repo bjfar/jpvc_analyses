@@ -9,17 +9,25 @@ from functools import reduce
 pd.set_option('display.max_colwidth', -1)
 
 path = "outdata"
-tag = "AllLikes_BF"
-with open("{0}/MSSMEW4_pvalue_results_{1}_1e4_FINAL.pkl".format(path,tag), 'rb') as pkl_file: 
+#tag = "AllLikes_BF"
+#tag = "CMSfixed_AllLikes_BF"
+#tag = "rev1_with_8TeV"
+tag = "rev1_without_8TeV"
+
+# Normal results, using best expected signal region
+with open("{0}/MSSMEW4_pvalue_results_{1}_2e4.pkl".format(path,tag), 'rb') as pkl_file: 
     results = pickle.load(pkl_file)  
 
 # Also get results using all signal regions, ignoring correlations when no covariance matrix is available
-with open("{0}/MSSMEW4_pvalue_results_{1}_2e4_NOCORR_FINAL.pkl".format(path,tag), 'rb') as pkl_file: 
+with open("{0}/MSSMEW4_pvalue_results_{1}_2e4_NOCORR.pkl".format(path,tag), 'rb') as pkl_file: 
     results_NOCORR = pickle.load(pkl_file)  
 
-# Extra no-correlation results for GOF test, with discovery SRs used for ATLAS 3b analysis
-with open("{0}/MSSMEW4_pvalue_results_{1}_2e4_NOCORR_discoverySR_FINAL.pkl".format(path,tag), 'rb') as pkl_file: 
+# # Extra no-correlation results for GOF test, with discovery SRs used for ATLAS 3b analysis
+with open("{0}/MSSMEW4_pvalue_results_{1}_2e4_NOCORR_discoverySR.pkl".format(path,tag), 'rb') as pkl_file: 
     results_NOCORR_DSR = pickle.load(pkl_file)  
+
+#print(results_NOCORR)
+#quit()
 
 # Prepare latex tables for publication
 # Need to rearrange them a bit, and improve labels
@@ -28,7 +36,7 @@ with open("{0}/MSSMEW4_pvalue_results_{1}_2e4_NOCORR_discoverySR_FINAL.pkl".form
 s_gof = results.query('test == "gof"').results_df
 bg_gof = results.query('test == "gof_b"').results_df
 musb_0 = results.query('test == "musb_mu=0"').results_df
-#s_gof_NC = results_NOCORR.query('test == "gof"').results_df
+#s_gof_NC = results_NOCORR.query('test == "gof"').results_df # Gave up on using discovery signal regions for these, don't have them for the new 8 TeV analyses
 #bg_gof_NC = results_NOCORR.query('test == "gof_b"').results_df
 s_gof_NC = results_NOCORR_DSR.query('test == "gof"').results_df
 bg_gof_NC = results_NOCORR_DSR.query('test == "gof_b"').results_df
